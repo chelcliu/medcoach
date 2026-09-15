@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedCoach — Medical School Interview Coach</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Med<span>Coach</span></div>
+  <nav>
+    <a href="#practice">Practice</a>
+    <a href="#application">Application</a>
+    <a href="#questions">Questions</a>
+    <a href="#progress">Progress</a>
+  </nav>
+</header>
+
+<main>
+<section class="hero">
+  <div>
+    <p class="eyebrow">FREE • BROWSER-BASED • NO API KEY</p>
+    <h1>Practice medical school interviews like the real thing.</h1>
+    <p class="hero-copy">Traditional, behavioral, MMI, ethics, group, panel, and application deep-dive practice with recording, transcript-based feedback, red-flag detection, and story coaching.</p>
+    <a class="primary-btn" href="#practice">Start practicing</a>
+  </div>
+  <div class="hero-card">
+    <div class="score-ring">7<br><small>skills</small></div>
+    <div><b>Core coaching rule</b><p>Don't just tell us a trait. <strong>Show it with a specific example.</strong></p></div>
+  </div>
+</section>
+
+<section id="practice" class="section">
+  <div class="section-heading">
+    <p class="eyebrow">INTERVIEW SIMULATOR</p>
+    <h2>Choose your interview</h2>
+  </div>
+
+  <div class="controls">
+    <label>Interview mode
+      <select id="mode">
+        <option value="traditional">Traditional</option>
+        <option value="behavioral">Behavioral</option>
+        <option value="mmi">MMI</option>
+        <option value="ethics">Ethics</option>
+        <option value="group">Group Interview</option>
+        <option value="panel">Panel Interview</option>
+        <option value="application">Application Deep Dive</option>
+      </select>
+    </label>
+
+    <label id="traditionalFormatWrap">Traditional format
+      <select id="traditionalFormat">
+        <option value="blind">Blind / Closed-file</option>
+        <option value="open">Open-file</option>
+        <option value="partial">Partially open</option>
+      </select>
+    </label>
+
+    <label id="mmiTypeWrap" class="hidden">MMI station
+      <select id="mmiType">
+        <option value="random">Random station</option>
+        <option value="ethical">Ethical scenario</option>
+        <option value="actor">Actor / patient role-play</option>
+        <option value="teamwork">Teamwork</option>
+        <option value="traditional">Traditional question</option>
+        <option value="written">Written / essay</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="practice-grid">
+    <article class="practice-card">
+      <div class="meta-row">
+        <span id="modeBadge" class="badge">Traditional</span>
+        <span id="timerLabel">02:00</span>
+      </div>
+      <h3 id="question">Tell me about yourself.</h3>
+      <p id="hint" class="hint">Aim for a concise story rather than a chronological résumé.</p>
+
+      <div id="prepBox" class="prep-box hidden">
+        <b>MMI simulation:</b> use the prep period to identify the issue, stakeholders, competing considerations, and your approach.
+      </div>
+
+      <div class="timer-actions">
+        <button id="startTimer" class="secondary-btn">Start timer</button>
+        <button id="newQuestion" class="secondary-btn">New question</button>
+        <button id="challengeBtn" class="secondary-btn hidden">Challenge me</button>
+      </div>
+
+      <div class="recording">
+        <div class="record-controls">
+          <button id="recordBtn" class="primary-btn">● Record answer</button>
+          <button id="stopBtn" class="danger-btn" disabled>■ Stop</button>
+        </div>
+        <p id="micStatus" class="status">Microphone not started.</p>
+        <audio id="audio" controls class="hidden"></audio>
+      </div>
+
+      <label class="transcript-label">Transcript / notes
+        <textarea id="transcript" rows="9" placeholder="Speak while recording if your browser supports speech recognition, or paste/type your answer here."></textarea>
+      </label>
+
+      <div class="privacy-note">No server or API is used by this site. Recordings are kept in this browser session. Browser speech recognition may use your browser's speech service depending on the browser.</div>
+
+      <button id="reviewBtn" class="primary-btn full">Review my answer</button>
+    </article>
+
+    <aside class="coach-card">
+      <h3>What the coach is looking for</h3>
+      <ul id="rubricList"></ul>
+      <div class="coach-tip">
+        <b>Interview rule</b>
+        <p>Specific example &gt; adjective. Tell me what happened, what you did, what changed, and what you learned.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section id="review" class="review hidden">
+    <div class="review-top">
+      <div>
+        <p class="eyebrow">ANSWER REVIEW</p>
+        <h2>Your coaching report</h2>
+      </div>
+      <div id="overallScore" class="big-score">—</div>
+    </div>
+    <div class="review-grid">
+      <div class="feedback-card"><h3>Strengths</h3><ul id="strengths"></ul></div>
+      <div class="feedback-card"><h3>Areas to improve</h3><ul id="improvements"></ul></div>
+      <div class="feedback-card"><h3>Delivery</h3><div id="delivery"></div></div>
+      <div class="feedback-card"><h3>Potential red flags</h3><ul id="redFlags"></ul></div>
+      <div class="feedback-card wide"><h3>Interview-specific coaching</h3><div id="specificFeedback"></div></div>
+      <div class="feedback-card wide"><h3>Suggested follow-up</h3><div id="followUp"></div></div>
+    </div>
+    <button id="saveBtn" class="secondary-btn">Save this practice attempt</button>
+  </section>
+</section>
+
+<section id="application" class="section alt">
+  <div class="section-heading">
+    <p class="eyebrow">APPLICATION DEEP DIVE</p>
+    <h2>Practice the parts of your application interviewers can ask about.</h2>
+    <p>Paste your own material. This free version does not send it to a server. It creates questions locally from keywords and lets you practice explaining your experiences.</p>
+  </div>
+  <div class="application-grid">
+    <label>Personal statement<textarea id="personalStatement" rows="8" placeholder="Paste your personal statement..."></textarea></label>
+    <label>Clinical experiences<textarea id="clinical" rows="6" placeholder="EMT, clinical assistant, shadowing, patient-facing work..."></textarea></label>
+    <label>Research<textarea id="research" rows="6" placeholder="Labs, publications, projects, research questions..."></textarea></label>
+    <label>Service / leadership / activities<textarea id="activities" rows="6" placeholder="Volunteer work, leadership, organizations, advocacy, hobbies..."></textarea></label>
+    <label>Most meaningful experiences<textarea id="meaningful" rows="6" placeholder="Your most meaningful AMCAS experiences..."></textarea></label>
+    <label>School-specific notes<textarea id="school" rows="6" placeholder="Why this school, mission, curriculum, programs, community, research..."></textarea></label>
+  </div>
+  <button id="saveApplication" class="primary-btn">Save application notes in this browser</button>
+  <button id="generateApp" class="secondary-btn">Create application questions</button>
+  <div id="appQuestions" class="question-list"></div>
+</section>
+
+<section id="questions" class="section">
+  <div class="section-heading">
+    <p class="eyebrow">QUESTION BANK</p>
+    <h2>Questions everyone should prepare</h2>
+  </div>
+  <div class="core-grid">
+    <div class="core-card"><b>01</b><h3>Tell me about yourself.</h3><p>Build a concise narrative around who you are, what shaped you, and why medicine.</p></div>
+    <div class="core-card"><b>02</b><h3>Why medicine?</h3><p>Show the evolution of your motivation through specific experiences.</p></div>
+    <div class="core-card"><b>03</b><h3>Why this school?</h3><p>Know the school well enough to explain fit specifically.</p></div>
+    <div class="core-card"><b>04</b><h3>What are your strengths?</h3><p>Never stop at adjectives. Prove the strength with a story.</p></div>
+    <div class="core-card"><b>05</b><h3>What are your weaknesses?</h3><p>Choose something genuine, explain your response, and show growth.</p></div>
+    <div class="core-card"><b>06</b><h3>Why should we choose you?</h3><p>Connect your experiences and contributions without sounding entitled.</p></div>
+    <div class="core-card"><b>07</b><h3>Where do you see yourself in 10 years?</h3><p>Show direction while leaving room for growth and uncertainty.</p></div>
+  </div>
+
+  <div class="question-bank-box">
+    <h3>Questions to ask your interviewer</h3>
+    <div class="two-col">
+      <div><h4>School-focused</h4><ul>
+        <li>What do you believe is the greatest strength of this medical school?</li>
+        <li>What is your favorite aspect of the school?</li>
+        <li>What distinguishes students here from students at other schools?</li>
+      </ul></div>
+      <div><h4>Interviewer-focused</h4><ul>
+        <li>What led you to choose your specialty?</li>
+        <li>Was there an experience that influenced your career path?</li>
+        <li>Looking back, is there anything you wish you had done differently?</li>
+      </ul></div>
+      <div><h4>Big-picture medicine</h4><ul>
+        <li>What do you see as the biggest challenge facing healthcare?</li>
+        <li>How would you advise my generation of physicians to approach that challenge?</li>
+      </ul></div>
+      <div><h4>Question-quality test</h4><p>Prefer questions that invite personal perspective over facts easily found on the school's website. You do not have to make every question exclusively about the school.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="progress" class="section alt">
+  <div class="section-heading"><p class="eyebrow">PROGRESS</p><h2>Your practice stays in this browser.</h2></div>
+  <div class="stats-grid">
+    <div><span id="attemptCount">0</span><small>attempts</small></div>
+    <div><span id="avgScore">—</span><small>average score</small></div>
+    <div><span id="bestScore">—</span><small>best score</small></div>
+  </div>
+  <div class="principles">
+    <h3>Source-informed interview principles</h3>
+    <ul>
+      <li>Do not assume the interviewer has read every part of your application.</li>
+      <li>MMI stations evaluate your reasoning and communication—not a magic “correct” answer.</li>
+      <li>In group interviews, do not be the alpha or the sheep: contribute without dominating.</li>
+      <li>Build on other people's ideas and disagree respectfully.</li>
+      <li>Stay composed when challenged or criticized. Do not take the bait.</li>
+      <li>Be kind and professional to everyone you encounter on interview day.</li>
+      <li>Interview day is also your chance to evaluate whether the school is right for you.</li>
+    </ul>
+  </div>
+</section>
+</main>
+<footer>MedCoach • Free browser-only practice tool • Built for interview preparation</footer>
+<script src="app.js"></script>
+</body>
+</html>
