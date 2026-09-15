@@ -114,74 +114,212 @@ function analyze(text){
   const lower=text.toLowerCase();
   const duration=Math.max(1,Math.round((Date.now()-(startTime||Date.now()))/1000));
   const wpm=Math.round(words.length/(duration/60));
+
   const fillers=["um","uh","like","you know","basically","literally","sort of","kind of","i think","maybe","just"];
   let fillerCount=0; const fillerHits=[];
-  fillers.forEach(f=>{const n=(lower.match(new RegExp("\\b"+f.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\$&")+"\\b","g"))||[]).length;if(n){fillerCount+=n;fillerHits.push(`${f} (${n})`)}});
+  fillers.forEach(f=>{
+    const escaped=f.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    const n=(lower.match(new RegExp("\\b"+escaped+"\\b","g"))||[]).length;
+    if(n){fillerCount+=n;fillerHits.push(`${f} (${n})`)}
+  });
+
   const repeated=(lower.match(/\b(\w+)\s+\1\b/g)||[]);
   const red=[];
-  if(/\b(idiot|stupid|lazy|drug seeker|noncompliant|difficult patient)\b/.test(lower))red.push("Judgmental patient/team language detected. Describe behavior or barriers rather than labeling a person.");
-  if(/\b(don't care|do not care)\b/.test(lower))red.push("Avoid language that suggests indifference toward a patient or teammate.");
-  if(/\b(hide|cover up|ignore)\b.{0,30}\b(mistake|error)\b/.test(lower))red.push("Your response may suggest concealing a mistake. Emphasize patient safety, honesty, and appropriate escalation.");
-  if(/\b(they deserved|deserved it)\b/.test(lower))red.push("Avoid punitive or judgmental framing of another person.");
-  if(/\b(always|never|obviously|definitely|there's only one|no question)\b/.test(lower))red.push("Absolute language can make nuanced ethical reasoning sound rigid.");
-  if(/\b(i was (the|a) (leader|best|only one))\b/.test(lower))red.push("Watch for self-promotional phrasing; show impact while recognizing your team.");
-  const traitWords=["detail-oriented","detail oriented","goal-driven","goal driven","hardworking","compassionate","empathetic","dedicated","passionate","organized","team player","resilient","motivated","leadership"];
+  if(/\b(idiot|stupid|lazy|drug seeker|noncompliant|difficult patient)\b/.test(lower))
+    red.push("Judgmental patient/team language detected. This is a meaningful professionalism concern; describe behavior or barriers instead of labeling a person.");
+  if(/\b(don't care|do not care)\b/.test(lower))
+    red.push("Language suggesting indifference toward a patient or teammate is a serious professionalism red flag.");
+  if(/\b(hide|cover up|ignore)\b.{0,30}\b(mistake|error)\b/.test(lower))
+    red.push("Your response may suggest concealing a mistake. In medicine, patient safety, honesty, and appropriate escalation are essential.");
+  if(/\b(they deserved|deserved it)\b/.test(lower))
+    red.push("Punitive or judgmental framing of another person can seriously damage an interview response.");
+  if(/\b(always|never|obviously|definitely|there's only one|no question)\b/.test(lower))
+    red.push("Absolute language can make your reasoning sound rigid, especially in ethics/MMI questions.");
+  if(/\b(i was (the|a) (leader|best|only one))\b/.test(lower))
+    red.push("Self-promotional phrasing can come across as arrogant. Show impact while recognizing your team.");
+
+  const traitWords=["detail-oriented","detail oriented","goal-driven","goal driven","hardworking","compassionate","empathetic","dedicated","passionate","organized","team player","resilient","motivated","leadership","driven","caring"];
   const traitHits=traitWords.filter(t=>lower.includes(t));
-  const hasExample=/\b(for example|for instance|when i|during my|at my|while i|one time|i volunteered|i created|i led|i worked)\b/.test(lower);
-  const hasReflection=/\b(i learned|i realized|this taught me|i would|looking back|i understand|changed my|i became)\b/.test(lower);
-  const hasAction=/\b(i (created|led|organized|analyzed|developed|asked|helped|spoke|advocated|coordinated|decided|worked|followed|addressed|apologized|changed|improved))\b/.test(lower);
-  let score=6;
-  if(words.length>=60)score++;
-  if(hasExample)score++;
-  if(hasAction)score++;
-  if(hasReflection)score++;
-  if(fillerCount>=6)score--;
-  if(wpm>175||wpm<85)score--;
-  if(red.length)score-=Math.min(2,red.length);
-  if(words.length<35)score-=1;
-  if(score>10)score=10;if(score<1)score=1;
-  return {score,words,wpm,fillerCount,fillerHits,repeated,red,traitHits,hasExample,hasReflection,hasAction};
+
+  // Evidence markers: concrete details are intentionally weighted heavily.
+  const hasExample=/\b(for example|for instance|when i|during my|at my|while i|one time|in my role|in my experience|a patient|a client|a teammate|a classmate|our team|we (raised|created|organized|built|developed|completed))\b/.test(lower);
+  const hasAction=/\b(i (created|led|organized|analyzed|developed|asked|helped|spoke|advocated|coordinated|decided|worked|followed|addressed|apologized|changed|improved|initiated|designed|implemented|communicated|learned|responded|listened|clarified|escalated|supported|managed|tracked|built|wrote|presented|volunteered))\b/.test(lower);
+  const hasResult=/\b(as a result|resulted in|because of this|we (raised|reached|achieved|completed|improved)|i (achieved|completed|improved|increased|reduced)|the outcome|ultimately|by the end|within \d+ (days|weeks|months)|received|earned)\b/.test(lower);
+  const hasReflection=/\b(i learned|i realized|this taught me|i would|looking back|i understand|changed my|i became|it showed me|i now|in the future|i took away|this experience)\b/.test(lower);
+  const directPatterns={
+    traditional:/\b(i want to|i chose|my goal|i am|i'm|medicine|physician|doctor|medical school|my strength|my weakness|i see myself)\b/,
+    behavioral:/\b(i|we|my|our|the situation|the challenge|the conflict|the mistake|feedback|failure)\b/,
+    mmi:/\b(i would|i'd|i would first|i would start|i think|i believe|i would consider|i would ask|i would speak)\b/,
+    ethics:/\b(i would|i'd|i think|i believe|autonomy|safety|confidentiality|capacity|fair|stakeholder|patient)\b/,
+    group:/\b(i would|i'd|i agree|i disagree|build on|team|group|others|listen|contribute)\b/,
+    panel:/\b(i|my|medicine|physician|experience|would|believe|think)\b/,
+    application:/\b(i|my|experience|research|clinical|volunteer|project|learned|worked)\b/
+  };
+  const direct=directPatterns[mode]?directPatterns[mode].test(lower):words.length>30;
+
+  // Detect likely "empty" answers rather than rewarding length alone.
+  const genericOnly = traitHits.length>=1 && !hasExample && !hasAction && !hasResult && !hasReflection;
+  const veryShort=words.length<30;
+  const short=words.length<55;
+  const extremelyLong=words.length>320;
+  const offTopic = words.length>=35 && !direct;
+
+  // Mode-specific reasoning markers.
+  let nuance=false, stakeholders=false;
+  if(mode==="mmi"||mode==="ethics"){
+    stakeholders=/\b(patient|family|physician|doctor|nurse|team|community|public|stakeholder|others|classmate|coworker)\b/.test(lower);
+    nuance=/\b(however|although|on the other hand|at the same time|depends|context|balance|trade[- ]?off|competing|consider|perspective|risk|benefit|capacity|autonomy|fairness|justice|confidentiality)\b/.test(lower);
+  }
+  const groupSkills=mode==="group" && /\b(agree|disagree|build on|others|listen|invite|make room|contribute|team|group)\b/.test(lower);
+
+  // Strict scoring: start low, then earn points for evidence and interview-ready behavior.
+  // A polished answer can reach 9-10; a generic or severely incomplete answer should remain low.
+  let score=2.0;
+  const scoreReasons=[];
+
+  if(words.length>=45){score+=0.8;scoreReasons.push("enough substance")}
+  if(words.length>=80){score+=0.5;scoreReasons.push("developed answer")}
+  if(direct){score+=0.7;scoreReasons.push("answers the prompt")}
+  if(hasExample){score+=1.4;scoreReasons.push("specific example")}
+  if(hasAction){score+=1.1;scoreReasons.push("clear personal action")}
+  if(hasResult){score+=0.7;scoreReasons.push("outcome")}
+  if(hasReflection){score+=1.4;scoreReasons.push("reflection")}
+  if(mode==="mmi"||mode==="ethics"){
+    if(stakeholders){score+=0.8;scoreReasons.push("stakeholders")}
+    if(nuance){score+=0.8;scoreReasons.push("nuance")}
+  }
+  if(mode==="group" && groupSkills){score+=0.9;scoreReasons.push("team interaction")}
+  if(genericOnly){score-=1.4}
+  if(veryShort){score-=1.5}
+  else if(short){score-=0.6}
+  if(offTopic){score-=1.2}
+  if(fillerCount>=3){score-=Math.min(1.2, fillerCount*0.12)}
+  if(wpm>180){score-=0.7}
+  if(wpm>0&&wpm<75){score-=0.6}
+  if(extremelyLong){score-=0.5}
+  if(repeated.length>=3){score-=0.4}
+  if(red.length){score-=Math.min(3.0,red.length*1.2)}
+
+  // A truly empty/generic answer should not accidentally float to a passing score.
+  if(words.length<20) score=Math.min(score,2.5);
+  if(genericOnly) score=Math.min(score,4.0);
+  if(red.length>=2) score=Math.min(score,4.0);
+  if(!hasExample && !hasReflection && words.length<60) score=Math.min(score,4.5);
+
+  score=Math.max(1,Math.min(10,Math.round(score*10)/10));
+
+  let severity="strong";
+  if(score<4) severity="weak";
+  else if(score<6) severity="needs-work";
+  else if(score<8) severity="solid";
+
+  return {
+    score,words,wpm,fillerCount,fillerHits,repeated,red,traitHits,
+    hasExample,hasReflection,hasAction,hasResult,direct,genericOnly,
+    veryShort,short,extremelyLong,offTopic,nuance,stakeholders,groupSkills,
+    severity,scoreReasons
+  };
 }
 function review(){
   const text=$("transcript").value.trim();
   if(!text){alert("Record an answer or paste/type your answer first.");return}
   const a=analyze(text);lastScore=a.score;
-  $("review").classList.remove("hidden");$("overallScore").textContent=a.score+"/10";
+  $("review").classList.remove("hidden");
+  $("overallScore").textContent=a.score+"/10";
+
   const strengths=[],improvements=[];
-  if(a.hasExample)strengths.push("You used concrete-example language rather than relying only on general claims.");
-  if(a.hasAction)strengths.push("You described actions you personally took.");
-  if(a.hasReflection)strengths.push("You included reflection or learning.");
-  if(a.words.length>=60)strengths.push("The answer has enough substance to evaluate.");
-  if(!strengths.length)strengths.push("You completed the response. Now focus on making the evidence and reflection more specific.");
-  if(a.traitHits.length && !a.hasExample)improvements.push(`You used trait language (${a.traitHits.slice(0,3).join(", ")}). Prove the trait with a specific story.`);
-  if(!a.hasExample)improvements.push("Add a concrete example: situation → what YOU did → result → reflection.");
-  if(!a.hasReflection)improvements.push("End with what you learned, how you changed, or how the experience informs your future practice.");
-  if(a.fillerCount>=3)improvements.push(`Reduce filler/hedging phrases: ${a.fillerHits.join(", ")}.`);
-  if(a.wpm>175)improvements.push(`Your estimated pace is ${a.wpm} WPM. Slow down and pause between ideas.`);
-  if(a.wpm>0&&a.wpm<85)improvements.push(`Your estimated pace is ${a.wpm} WPM. Make sure the answer has enough detail and energy.`);
-  if(a.words.length<45)improvements.push("Your answer is quite short. Add one specific example and a reflection rather than padding it with adjectives.");
-  if(!improvements.length)improvements.push("Keep the specificity and reflection. Next, practice answering the follow-up without sounding memorized.");
-  $("strengths").innerHTML=strengths.map(x=>`<li>${x}</li>`).join("");
-  $("improvements").innerHTML=improvements.map(x=>`<li>${x}</li>`).join("");
-  $("redFlags").innerHTML=(a.red.length?a.red:["No major red-flag phrases detected by this rule-based check. Remember that the tool cannot judge tone or context perfectly."]).map(x=>`<li>${x}</li>`).join("");
-  $("delivery").innerHTML=`<p><b>${a.words.length}</b> words • estimated <b>${a.wpm||"—"} WPM</b></p><p>Filler/hedging count: <b>${a.fillerCount}</b>. Repeated-word pairs: <b>${a.repeated.length}</b>.</p>`;
+  const critical=[];
+
+  if(a.score<=3.9){
+    critical.push("This answer is not interview-ready yet. Do not move on just because you finished speaking—rebuild the answer and try again.");
+  } else if(a.score<6){
+    critical.push("This answer has a usable starting point, but I would not rely on it in a real medical-school interview without revision.");
+  } else if(a.score<8){
+    critical.push("This is workable, but there are clear opportunities to make it more specific, reflective, and memorable.");
+  } else {
+    critical.push("This is a strong response by the coach's rule-based criteria. Keep the structure, but continue practicing so it sounds natural rather than memorized.");
+  }
+
+  if(a.hasExample) strengths.push("You gave at least one concrete example.");
+  if(a.hasAction) strengths.push("You explained actions you personally took rather than only describing the situation.");
+  if(a.hasResult) strengths.push("You included an outcome or consequence.");
+  if(a.hasReflection) strengths.push("You included reflection or learning.");
+  if((mode==="mmi"||mode==="ethics")&&a.stakeholders) strengths.push("You considered people affected by the decision.");
+  if((mode==="mmi"||mode==="ethics")&&a.nuance) strengths.push("You used nuanced language rather than treating the issue as completely black-and-white.");
+  if(mode==="group"&&a.groupSkills) strengths.push("You used language that suggests collaboration and respectful group participation.");
+  if(!strengths.length) strengths.push("There is not enough evidence in this response to identify a meaningful interview strength yet.");
+
+  if(a.genericOnly){
+    improvements.push("🚨 Major issue: you are telling the interviewer what kind of person you are instead of proving it. Replace adjectives like “hardworking,” “detail-oriented,” or “goal-driven” with a specific story.");
+  }
+  if(!a.direct){
+    improvements.push("🚨 You did not clearly answer the question. Start with a direct answer in your first 1–2 sentences, then support it with evidence.");
+  }
+  if(!a.hasExample){
+    improvements.push("You need a concrete example. Give the interviewer a real situation, not a general statement about yourself.");
+  }
+  if(!a.hasAction){
+    improvements.push("The interviewer needs to know what YOU actually did. Use active language: “I created…,” “I organized…,” “I addressed…,” “I learned…”.");
+  }
+  if(!a.hasResult){
+    improvements.push("Add the outcome. What changed? What did your team accomplish? What was the measurable or observable result?");
+  }
+  if(!a.hasReflection){
+    improvements.push("🚨 Your answer is missing reflection. End with what you learned, how you changed, or how the experience will influence you as a future physician.");
+  }
+  if(a.veryShort){
+    improvements.push("This answer is far too short to demonstrate your qualifications. Aim for a focused, substantive response rather than stopping after a few sentences.");
+  } else if(a.short){
+    improvements.push("This response is on the short side. Do not add filler—add evidence, action, and reflection.");
+  }
+  if(a.fillerCount>=3) improvements.push(`Your response contains ${a.fillerCount} filler/hedging instances (${a.fillerHits.join(", ")}). Practice pausing instead of filling silence.`);
+  if(a.wpm>180) improvements.push(`Your estimated pace is ${a.wpm} WPM, which is very fast. Slow down; speed can make a good answer sound anxious or rehearsed.`);
+  if(a.wpm>0&&a.wpm<75) improvements.push(`Your estimated pace is ${a.wpm} WPM. Make sure you are speaking with enough energy and detail.`);
+  if(a.repeated.length>=3) improvements.push(`You repeated adjacent words ${a.repeated.length} times. Slow down and organize the next thought before speaking.`);
+  if(a.offTopic) improvements.push("The response may be drifting away from the actual prompt. Listen for the question being asked and make your first sentence answer it.");
+  if(a.red.length) critical.push("Potential interview red flags were detected. These matter more than minor delivery issues because professionalism and judgment are heavily scrutinized in medical-school interviews.");
+
+  if(mode==="mmi"||mode==="ethics"){
+    if(!a.stakeholders) improvements.push("For an MMI/ethics answer, identify who is affected. Name the relevant stakeholders before jumping to your conclusion.");
+    if(!a.nuance) improvements.push("Your reasoning needs more nuance. Acknowledge competing values or information you would want before deciding.");
+  }
+  if(mode==="group"){
+    improvements.push("In a real group interview, remember: contribute without dominating, build on others' ideas, and make room for quieter participants.");
+  }
+  if(mode==="panel"){
+    improvements.push("In a panel, answer the person who asked the question while naturally including the other interviewers. If challenged, acknowledge the point before defending or revising your position.");
+  }
+
+  // Keep feedback concise enough to act on, but prioritize the biggest weaknesses.
+  $("strengths").innerHTML=strengths.slice(0,5).map(x=>`<li>${x}</li>`).join("");
+  $("improvements").innerHTML=improvements.slice(0,8).map(x=>`<li>${x}</li>`).join("");
+  $("redFlags").innerHTML=(a.red.length?a.red:["No major red-flag phrases detected. This does NOT mean the answer is safe or strong; tone, judgment, and context cannot be fully assessed by this rule-based tool."]).map(x=>`<li>${x}</li>`).join("");
+
+  $("delivery").innerHTML=`
+    <p><b>${a.words.length}</b> words • estimated <b>${a.wpm||"—"} WPM</b></p>
+    <p>Filler/hedging count: <b>${a.fillerCount}</b> • repeated-word pairs: <b>${a.repeated.length}</b></p>
+    <p><b>Coach verdict:</b> ${critical.join(" ")}</p>`;
+
   let specific="";
-  if(mode==="traditional")specific="Treat the answer as a conversation, not a recitation. Interviewers may or may not have read your application, so make the answer understandable on its own.";
-  if(mode==="behavioral")specific="Use a clear story. Spend most of the answer on what you did and what you learned, not on setting the scene.";
-  if(mode==="mmi")specific="There is not necessarily one hidden correct answer. Make your reasoning visible, identify stakeholders, acknowledge tradeoffs, and communicate with empathy.";
-  if(mode==="ethics")specific="Avoid jumping to an absolute conclusion. Explain the competing principles and how you would gather information before acting.";
-  if(mode==="group")specific="The goal is neither to be the alpha nor the sheep. Contribute, build on others, make room for quieter people, and disagree respectfully.";
-  if(mode==="panel")specific="A panel may feel intense or include challenging signals. Stay composed, answer the question directly, and do not become defensive.";
-  if(mode==="application")specific="Be able to go deeper than your written application: your role, a specific moment, what surprised you, what you learned, and how the experience changed you.";
+  if(mode==="traditional") specific="Traditional interviews reward direct, specific, reflective answers. Do not assume the interviewer has read your application; make the story understandable without relying on your written materials.";
+  if(mode==="behavioral") specific="Use a real story: situation → your actions → result → reflection. The biggest mistake is spending most of the answer describing the setting instead of what you did.";
+  if(mode==="mmi") specific="MMI stations are about reasoning and communication, not finding a magic answer. Make your thought process visible, consider stakeholders, and stay calm when challenged.";
+  if(mode==="ethics") specific="Avoid a snap judgment. Explain what information you would gather, which principles are competing, who is affected, and how you would communicate your decision.";
+  if(mode==="group") specific="The target is neither “alpha” nor “sheep.” Show that you can contribute, listen, build on another person's point, disagree respectfully, and help the group move forward.";
+  if(mode==="panel") specific="A panel can intentionally create pressure. Do not become defensive or feisty. Pause, acknowledge the challenge, then explain or revise your reasoning.";
+  if(mode==="application") specific="Be ready to go deeper than your AMCAS wording. Know your exact role, a specific moment, the result, what surprised you, what you learned, and how the experience shaped your path to medicine.";
   $("specificFeedback").textContent=specific;
+
   const q=followUps[currentQuestion?.[0]]||pick([
     "Can you give me a specific example?",
     "What did YOU personally do in that situation?",
+    "What was the outcome?",
     "What did you learn from that experience?",
     "How did that experience change the way you approach medicine?",
     "What would you do differently if you faced the situation again?"
   ]);
-  $("followUp").innerHTML=`<p><b>Interviewer:</b> ${q}</p><p class="hint">Try answering this follow-up without repeating your first answer word-for-word.</p>`;
+  $("followUp").innerHTML=`<p><b>Interviewer:</b> ${q}</p><p class="hint">If your answer was weak, do not memorize a prettier version. Try the question again using a specific story and reflection.</p>`;
+
   $("review").scrollIntoView({behavior:"smooth"});
 }
 function saveAttempt(){
